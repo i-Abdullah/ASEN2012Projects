@@ -1,4 +1,4 @@
-function [ m b sig_y sig_b sig_m ] = LSM_FirstDeg(t,y)
+function [ m b sig_y sig_b sig_m ] = LSM(t,y)
 
 b_coef = ones(1,length(t))';
 A = [ t b_coef ];
