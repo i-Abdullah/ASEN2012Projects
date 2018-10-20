@@ -14,7 +14,8 @@ T_Sample_2 = Data(:,4); % temp of sample using thermocouple 2
 
 %-=-=-=-=-=-=-=-=-=-=-=-=-= ( weighted Avg temp )%-=-=-=-=-=-=-=-=-=-=-=-=
 
-TempSample = (T_Sample_1+T_Sample_2)/2;
+TempSample = (T_Sample_1+T_Sample_2)/2
+
 
 %-=-=-=-=-=-=-=-=-=-=-=-=-= ( Material info )%-=-=-=-=-=-=-=-=-=-=-=-=
 
@@ -107,7 +108,12 @@ end
 
 
 %% Specific Heat
-cv = (SpecifHeatCalo*Calo_mass*(Temp2-Temp_L)) / ((Sample_mass*(mean(T_boiling(1:235))-Temp2)));
+SpecificHeatSample = (SpecifHeatCalo*Calo_mass*(Temp2-Temp_L)) / ((Sample_mass*(mean(T_boiling(1:235))-Temp2)));
+%convert units
+
+SpecificHeatSample = SpecificHeatSample * ( 1 /0.238846 );
+
+%% error estimations
 
 %% plot
 color = linspace(1,10,length(Time));
