@@ -14,7 +14,7 @@ T_Sample_2 = Data(:,4); % temp of sample using thermocouple 2
 
 %-=-=-=-=-=-=-=-=-=-=-=-=-= ( Avg temp between 1 and 2 )%-=-=-=-=-=-=-=-=-=-=-=-=
 
-TempSample = (T_Sample_1+T_Sample_2)/2
+TempSample = (T_Sample_1+T_Sample_2)/2;
 
 
 %-=-=-=-=-=-=-=-=-=-=-=-=-= ( Material info )%-=-=-=-=-=-=-=-=-=-=-=-=
@@ -42,12 +42,12 @@ Al_6063_T1 = 0.9;
 
 [ m1 b1 sig_y1 sig_b1 sig_m1 Q1 ] = LSM(Time(1:235),TempSample(1:235));
 [ m2 b2 sig_y2 sig_b2 sig_m2 Q2 ] = LSM(Time(235:280),TempSample(235:280));
-[ m3 b3 sig_y3 sig_b3 sig_m3 Q3 ] = LSM(Time(300:end),TempSample(300:end));
+[ m3 b3 sig_y3 sig_b3 sig_m3 Q3 ] = LSM(Time(340:end),TempSample(340:end));
 TimeSampleAdded = Time(235);
 
 
-%option 1 [ m3 b3 sig_y3 sig_b3 sig_m3 ] = LSM(Time(340:end),TempSample(340:end));
-%option 2 [ m3 b3 sig_y3 sig_b3 sig_m3 ] = LSM(Time(280:end),TempSample(280:end));
+%[ m3 b3 sig_y3 sig_b3 sig_m3 Q3 ] = LSM(Time(300:end),TempSample(300:end));
+%[ m3 b3 sig_y3 sig_b3 sig_m3 Q3 ] = LSM(Time(280:end),TempSample(280:end));
 
 
 %-=-=-=-=-=-=-=-=-=-=-=(Establish the fit lines)=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
@@ -86,14 +86,8 @@ Temp2 = double(Temp2); %convert it from symbolic expression to double number.
 % the sample was inputted and use it, and consider it as our T1, and the
 % standard deviation will be the uncertintity with it.
 
-T1 = mean(T_boiling(1:235); % the temp T1
-T1_unc = mean(T_boiling(1:235); %Uncertinity with it.
-
-fprintf('Initial temperature of calorimeter is: %f \n',Temp_L);
-fprintf('Time when the sample was added (seconds) is: %f \n',TimeSampleAdded);
-fprintf('Equilibrium temp of the sample and calorimete is: %f \n',Temp2);
-fprintf('Halfway Temp is: %f \n',Temp_mid);
-fprintf('Initial water temp when sample was added: %f \n',T_boiling(235));
+Temp1 = mean(T_boiling(1:235)); % the temp T1
+Temp1_unc = std(T_boiling(1:235)); %Uncertinity with it.
 
 %% Uncertainty measurements
 
@@ -114,25 +108,78 @@ for i=1:length(Time)
 end
 
 
+%uncertininty in T2:
 
+sigmaT2 = [ TimeT2 1 ] * Q1 * [ TimeT2 ; 1 ];
 
 
 %% Specific Heat
-SpecificHeatSample = (SpecifHeatCalo*Calo_mass*(Temp2-Temp_L)) / ((Sample_mass*(mean(T_boiling(1:235))-Temp2)));
+SpecificHeatSample = (SpecifHeatCalo*Calo_mass*(Temp2-Temp_L)) / ((Sample_mass*(Temp1-Temp2)));
+
 %convert units
 
 SpecificHeatSample = SpecificHeatSample * ( 1 /0.238846 );
 
 %% error estimations 
 
+%-=-=-=-==-=-=-=-=-=-=-=-=-=-=(General Method)=-=-=-=-=-=-=-=-=-=
+
+
+%-=-=-=-==-=-=-=-=-=-=-=-=-=-=(Step by step)=-=-=-=-=-=-=-=-=-=
+
+% A = T2 - T0 (T0 == Temp_L)
+
+A = Temp2 - Temp_L ;
+sigmaA = ( ( sigmaT2 ) ^2 + ( sig_y1 ) ^2 ) ^(1/2);
+
+
+% B = T1 - T2
+B = (Temp1 - Temp2);
+sigmaB =  ( ( sigmaT2 ) ^2 + ( Temp1_unc ) ^2 ) ^(1/2);
+
+% A/B = D
+
+D = A/B;
+sigmaD = abs(D) * ( ( sigmaB/B ) ^2 + ( sigmaA/A ) ^2 ) ^(1/2);
+
+% C = mc / ms ( mass of calorimeter / mass of sample )
+
+C = Calo_mass/Sample_mass ;
+sigmaC = abs(C) * ( ( unc_Calo_mass/Calo_mass ) ^2 + ( unc_Sample_mass/Sample_mass ) ^2 ) ^(1/2);
+
+% E = C * D
+
+E = C * D;
+sigmaE = abs(E) *  ( ( sigmaC/C ) ^2 + ( sigmaD/D ) ^2 ) ^(1/2);
+
+% final uncertinty, E * Specific Heat of calorimeter since it's treated as
+% exact.
+
+SigmaSpecificHeat = sigmaE * (SpecifHeatCalo*( 1 /0.238846 ));
+SigmaSpecificHeat = double(SigmaSpecificHeat);
 %% preapre errors for plot
 
 sigmay1 = ones(1,length(TempSample))*sig_y1;
-%% plot
+
+%% print out the results:
+
+fprintf('Initial temperature of calorimeter is: %f \n',Temp_L);
+fprintf('Initial water temp when sample was added: %f \n',T_boiling(235));
+fprintf('Time when the sample was added (seconds) is: %f \n',TimeSampleAdded);
+fprintf('Halfway Temp is: %f \n',Temp_mid);
+fprintf('Equilibrium temp of the sample and calorimete is: %f \n',Temp2);
+fprintf('\n');
+fprintf('-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-= \n');
+fprintf('Your Sample Specific Heat is: %f \n',SpecificHeatSample);
+fprintf('with uncertainty of: %f',SigmaSpecificHeat);
+fprintf(',which is: %f',(SigmaSpecificHeat/SpecificHeatSample)*100);
+fprintf('%% %f');
+
+%% plot 
+
+figure(1)
+
 scatter(Time,TempSample,2,'*','MarkerEdgeColor',[0.7 0.9 0.6])
-hold on
-%shadedErrorBar(Time(1:235),TempSample(1:235),(ones(235,1)*sig_y1))
-fill([Time(1:end);flipud(Time(1:end))],[output_line_fit1(1:end)-sigma_newY1(1:end);flipud(output_line_fit1(1:end)+sigma_newY1(1:end))],[.9 .9 .9],'linestyle','none');
 hold on
 plot(Time,output_line_fit1,'--r','LineWidth',1)
 hold on
@@ -152,5 +199,22 @@ plot(TimeT2,Temp_mid,'b*')
 hold on
 plot(TimeT2,Temp2,'b*')
 hold on
+area(output_line_fit1(235:end),sigma_newY1(235:end))
+hold on
+area(output_line_fit1(235:end),-sigma_newY1(235:end))
+
 grid minor
 ylim([20 28])
+legend('one','a','b','c','d','e','f','g')
+
+%% plot the uncertininty with possible samples.
+
+%{
+figure(2)
+
+herrorbar(Zn_Cu_Ti,1,'*')
+hold on
+herrorbar(mean(Pb),1,min(Pb),max(Pb),'*')
+hold on
+herrorbar(Tellurium_Copper,1,'*')
+%}
