@@ -1,4 +1,4 @@
-function [ m b sig_y sig_b sig_m ] = LSM(t,y)
+function [ m_sl b_int sig_y sig_b sig_m Q ] = LSM(t,y)
 
 b_coef = ones(1,length(t))';
 A = [ t b_coef ];
@@ -6,8 +6,8 @@ b = y;
 
 
 x = inv(transpose(A) * (A)) * transpose(A) * b;
-m = x(1);
-b = x(2);
+m_sl = x(1);
+b_int = x(2);
 
 %% sigma y is equation  from the book [ ? (1/N-2) sum(yi-mti-b) ]
 

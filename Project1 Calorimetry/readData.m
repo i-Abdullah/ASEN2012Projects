@@ -12,7 +12,7 @@ T_boiling = Data(:,2); % boiling temp
 T_Sample_1 = Data(:,3); % temp of sample using thermocouple 1
 T_Sample_2 = Data(:,4); % temp of sample using thermocouple 2
 
-%-=-=-=-=-=-=-=-=-=-=-=-=-= ( weighted Avg temp )%-=-=-=-=-=-=-=-=-=-=-=-=
+%-=-=-=-=-=-=-=-=-=-=-=-=-= ( Avg temp between 1 and 2 )%-=-=-=-=-=-=-=-=-=-=-=-=
 
 TempSample = (T_Sample_1+T_Sample_2)/2
 
@@ -40,9 +40,9 @@ Al_6063_T1 = 0.9;
 
 %% Linear Fitting to find T0, Temp when the 
 
-[ m1 b1 sig_y1 sig_b1 sig_m1 ] = LSM(Time(1:235),TempSample(1:235));
-[ m2 b2 sig_y2 sig_b2 sig_m2 ] = LSM(Time(235:280),TempSample(235:280));
-[ m3 b3 sig_y3 sig_b3 sig_m3 ] = LSM(Time(300:end),TempSample(300:end));
+[ m1 b1 sig_y1 sig_b1 sig_m1 Q1 ] = LSM(Time(1:235),TempSample(1:235));
+[ m2 b2 sig_y2 sig_b2 sig_m2 Q2 ] = LSM(Time(235:280),TempSample(235:280));
+[ m3 b3 sig_y3 sig_b3 sig_m3 Q3 ] = LSM(Time(300:end),TempSample(300:end));
 TimeSampleAdded = Time(235);
 
 
@@ -77,9 +77,17 @@ Temp_mid = (Temp_L+Temp_H)/2;
 % it using root finding methods
 
 T2_poly = @(x) m2*x + b2 - Temp_mid; %convert t2 into root finding problem
-TimeT2 = solve(T2_poly);
-Temp2 = f3(TimeT2);
+TimeT2 = solve(T2_poly); %find the root.
+Temp2 = f3(TimeT2); %the root is the time, thus evaluate that time at the third best fit
+Temp2 = double(Temp2); %convert it from symbolic expression to double number.
 
+% T1 will be the temp of of the boiling water @ the time the sample was
+% inputted, thus we will take the mean from time = 1 to the time we think
+% the sample was inputted and use it, and consider it as our T1, and the
+% standard deviation will be the uncertintity with it.
+
+T1 = mean(T_boiling(1:235); % the temp T1
+T1_unc = mean(T_boiling(1:235); %Uncertinity with it.
 
 fprintf('Initial temperature of calorimeter is: %f \n',Temp_L);
 fprintf('Time when the sample was added (seconds) is: %f \n',TimeSampleAdded);
@@ -89,22 +97,24 @@ fprintf('Initial water temp when sample was added: %f \n',T_boiling(235));
 
 %% Uncertainty measurements
 
-% set up the Q matrix
+% Get uncertinnty with new values along the fitting line
 
-Q_y_1 = zeros(length(coeff1),length(coeff1));
-Q_y_2 = zeros(2,2);
-Q_y_3 = zeros(2,2);
+% establish the matrices
 
-%{
-for i = 1:2
+sigma_newY1 = zeros(1,length(Time));
+sigma_newY2 = zeros(1,length(Time));
+sigma_newY3 = zeros(1,length(Time));
+
+for i=1:length(Time)
     
-Q_y_1(i,i) = zeros(2,2);
-Q_y_2(i,i) = zeros(2,2);
-Q_y_3(i,i) = zeros(2,2);
-
+    sigma_newY1(i) = [ Time(i) 1 ] * Q1 * [ Time(i) ; 1 ];
+    sigma_newY2(i) = [ Time(i) 1 ] * Q2 * [ Time(i) ; 1 ];
+    sigma_newY3(i) = [ Time(i) 1 ] * Q3 * [ Time(i) ; 1 ];
+    
 end
 
-%}
+
+
 
 
 %% Specific Heat
@@ -113,13 +123,16 @@ SpecificHeatSample = (SpecifHeatCalo*Calo_mass*(Temp2-Temp_L)) / ((Sample_mass*(
 
 SpecificHeatSample = SpecificHeatSample * ( 1 /0.238846 );
 
-%% error estimations
+%% error estimations 
 
+%% preapre errors for plot
+
+sigmay1 = ones(1,length(TempSample))*sig_y1;
 %% plot
-color = linspace(1,10,length(Time));
 scatter(Time,TempSample,2,'*','MarkerEdgeColor',[0.7 0.9 0.6])
 hold on
 %shadedErrorBar(Time(1:235),TempSample(1:235),(ones(235,1)*sig_y1))
+fill([Time(1:end);flipud(Time(1:end))],[output_line_fit1(1:end)-sigma_newY1(1:end);flipud(output_line_fit1(1:end)+sigma_newY1(1:end))],[.9 .9 .9],'linestyle','none');
 hold on
 plot(Time,output_line_fit1,'--r','LineWidth',1)
 hold on
