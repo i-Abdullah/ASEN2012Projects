@@ -42,7 +42,10 @@ Al_6063_T1 = 0.9;
 
 [ m1 b1 sig_y1 sig_b1 sig_m1 Q1 ] = LSM(Time(1:235),TempSample(1:235));
 [ m2 b2 sig_y2 sig_b2 sig_m2 Q2 ] = LSM(Time(235:280),TempSample(235:280));
-[ m3 b3 sig_y3 sig_b3 sig_m3 Q3 ] = LSM(Time(340:end),TempSample(340:end));
+
+maxIndi = find(max(TempSample)==TempSample);
+[ m3 b3 sig_y3 sig_b3 sig_m3 Q3 ] = LSM(Time(maxIndi:end),TempSample(maxIndi:end));
+
 TimeSampleAdded = Time(235);
 
 
@@ -87,17 +90,19 @@ Temp2 = double(Temp2); %convert it from symbolic expression to double number.
 % standard deviation will be the uncertintity with it.
 
 Temp1 = mean(T_boiling(1:235)); % the temp T1
-Temp1_unc = std(T_boiling(1:235)); %Uncertinity with it.
+Temp1_unc = std(T_boiling(1:235))/sqrt(length(T_boiling(1:235))); %Uncertinity with it.
 
 %% Uncertainty measurements
 
 % Get uncertinnty with new values along the fitting line
 
-% establish the matrices
+% establish the matrices that will have each new uncertinnty as we step
+% away from our best fit, this's just for us so we can see what's going on.
 
 sigma_newY1 = zeros(1,length(Time));
 sigma_newY2 = zeros(1,length(Time));
 sigma_newY3 = zeros(1,length(Time));
+
 
 for i=1:length(Time)
     
@@ -108,12 +113,14 @@ for i=1:length(Time)
 end
 
 
-%uncertininty in T2:
+%uncertininty in T2 (Equilibrium temp)
 
 sigmaT2 = [ TimeT2 1 ] * Q1 * [ TimeT2 ; 1 ];
 
+sigmaT2 = double(sqrt(sigmaT2));
 
 %% Specific Heat
+
 SpecificHeatSample = (SpecifHeatCalo*Calo_mass*(Temp2-Temp_L)) / ((Sample_mass*(Temp1-Temp2)));
 
 %convert units
@@ -157,9 +164,6 @@ sigmaE = abs(E) *  ( ( sigmaC/C ) ^2 + ( sigmaD/D ) ^2 ) ^(1/2);
 
 SigmaSpecificHeat = sigmaE * (SpecifHeatCalo*( 1 /0.238846 ));
 SigmaSpecificHeat = double(SigmaSpecificHeat);
-%% preapre errors for plot
-
-sigmay1 = ones(1,length(TempSample))*sig_y1;
 
 %% print out the results:
 
@@ -169,52 +173,84 @@ fprintf('Time when the sample was added (seconds) is: %f \n',TimeSampleAdded);
 fprintf('Halfway Temp is: %f \n',Temp_mid);
 fprintf('Equilibrium temp of the sample and calorimete is: %f \n',Temp2);
 fprintf('\n');
-fprintf('-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-= \n');
+fprintf('--------------------------------------------------------- \n');
 fprintf('Your Sample Specific Heat is: %f \n',SpecificHeatSample);
 fprintf('with uncertainty of: %f',SigmaSpecificHeat);
 fprintf(',which is: %f',(SigmaSpecificHeat/SpecificHeatSample)*100);
-fprintf('%% %f');
+fprintf('%% %f \n');
+fprintf('');
 
-%% plot 
+%% plot the analysis results
 
 figure(1)
 
 scatter(Time,TempSample,2,'*','MarkerEdgeColor',[0.7 0.9 0.6])
 hold on
-plot(Time,output_line_fit1,'--r','LineWidth',1)
+plot(Time,output_line_fit1,'--b','LineWidth',1)
 hold on
-plot(Time,output_line_fit2,'-.r','LineWidth',1)
+plot(Time,output_line_fit2,'--r','LineWidth',1)
 hold on
-plot(Time,output_line_fit3,'-.r')
+plot(Time,output_line_fit3,'--k','LineWidth',1)
 hold on
-plot([TimeSampleAdded TimeSampleAdded], [0 40],'-.b')
+plot([TimeSampleAdded TimeSampleAdded], [0 40],'b','LineWidth',1.2)
 hold on
-plot([TimeT2 TimeT2], [0 40],'-.b')
+plot([TimeT2 TimeT2], [0 40],'k','LineWidth',1.2)
 hold on
-plot(Time(235),T_Sample_1(235),'r*')
+plot(TimeSampleAdded,Temp_L,'r<','LineWidth',3)
 hold on
-plot(TimeSampleAdded,Temp_L,'b*')
+plot(TimeT2,Temp_mid,'ro','LineWidth',3)
 hold on
-plot(TimeT2,Temp_mid,'b*')
+plot(TimeT2,Temp2,'r*','LineWidth',3)
 hold on
-plot(TimeT2,Temp2,'b*')
-hold on
-area(output_line_fit1(235:end),sigma_newY1(235:end))
-hold on
-area(output_line_fit1(235:end),-sigma_newY1(235:end))
-
 grid minor
 ylim([20 28])
-legend('one','a','b','c','d','e','f','g')
+legend('Collected Data','Best fit 1','Best fit 2','Best fit 3','V-line when sample was added','V-line halfway','Sample Initial temperature','Midway sample temperature','Equilibrium temperature')
+title('Temperature Profile For Calorimeter')
+xlabel('Time (Seconds)')
+ylabel('Temperature (celsius)')
 
 %% plot the uncertininty with possible samples.
 
-%{
+
 figure(2)
 
-herrorbar(Zn_Cu_Ti,1,'*')
+%diffrence boxes
+
+box_x_1=[mean(Pb) SpecificHeatSample SpecificHeatSample mean(Pb)];
+box_y_1=[0.4 0.4 1.3 1.3];
+
+box_x_2=[ SpecificHeatSample Tellurium_Copper Tellurium_Copper SpecificHeatSample ];
+box_y_2=[0.4 0.4 1.3 1.3];
+
+
+box_x_3=[ Tellurium_Copper Zn_Cu_Ti Zn_Cu_Ti Tellurium_Copper ];
+box_y_3=[0.4 0.4 1.3 1.3];
+
+box_x_4=[  Zn_Cu_Ti Al_6063_T1 Al_6063_T1 Zn_Cu_Ti  ];
+box_y_4=[0.4 0.4 1.3 1.3];
+
+%plot
+patch(box_x_1,box_y_1,'red','FaceAlpha',0.08)
 hold on
-herrorbar(mean(Pb),1,min(Pb),max(Pb),'*')
+patch(box_x_2,box_y_2,'green','FaceAlpha',0.08)
 hold on
-herrorbar(Tellurium_Copper,1,'*')
-%}
+patch(box_x_3,box_y_3,'yellow','FaceAlpha',0.08)
+hold on
+patch(box_x_4,box_y_4,'blue','FaceAlpha',0.08)
+hold on
+herrorbar(Zn_Cu_Ti,1,0.00001,0.00001,'^')
+hold on
+herrorbar(mean(Pb),1,(std(Pb)/length(Pb)), (std(Pb)/length(Pb)),'o')
+hold on
+herrorbar(Tellurium_Copper,1,0.00001,0.00001,'*')
+hold on
+herrorbar(Al_6063_T1,1,0.00001,0.00001,'h')
+hold on
+herrorbar(SpecificHeatSample,0.8,SigmaSpecificHeat,SigmaSpecificHeat,'p')
+title('Candidate samples')
+ylim([0.4 1.3])
+xlabel('Specific Heat with uncertainties')
+set(gca, 'YTick', []) %hide y-axis
+grid minor
+legend('Difference between Pb & Sample', 'Difference between Sample & Copper','Difference between Copper & Zn-Cu-Ti ','Difference between Zn-Cu-Ti & Al', '','Zn-Cu-Ti ','','Pb','','Cu','','Al','','Sample')
+
