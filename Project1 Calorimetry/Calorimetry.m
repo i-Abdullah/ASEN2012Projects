@@ -1,3 +1,22 @@
+%% Info:
+%{
+
+The following file is a part of Project 1: Calorimetry for ASEN2012:
+Experimntal and Computatioanl Methods, CU Boulder, Fall 2018. Done by:Evan Shults
+and Abdulla Al Ameri.
+
+The goal of this project. A calorimeter is a device that utilizes heat transfer to determine thermodynamic
+properties of a substances. For the purpose of our experiment, the objective was to us a calorimeter to determine the composition
+of an unknown sample based on its specific heat. The experimental portion was performed by laboratory members of the University
+of Colorado Aerospace Engineering Department.
+
+They introduced a substance into the calorimeter with temperature readings of the substance and the boundary water.
+As the temperature changed they stored the data. We could then use that data to determine what the material sample was
+based on the determination of its specific heat. The importance of the experiment and analysis is to show that a calorimeter
+can be used to determine an unknown material substance based on the thermodynamic properties of all known substances.
+
+%}
+
 %% read the file
 
 clear
@@ -205,7 +224,7 @@ hold on
 grid minor
 ylim([20 28])
 legend('Collected Data','Best fit 1','Best fit 2','Best fit 3','V-line when sample was added','V-line halfway','Sample Initial temperature','Midway sample temperature','Equilibrium temperature')
-title('Temperature Profile For Calorimeter')
+title('Temperature profile')
 xlabel('Time (Seconds)')
 ylabel('Temperature (celsius)')
 
