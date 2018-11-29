@@ -17,6 +17,7 @@ function [ derivatives ] = RocketODE(Time,States,TestStandLength,Theta,Pgage,Pam
 
 % PREDEFINE Constants:
 
+global t2 t1 t3
 
 %% Phase 1: 
 
@@ -50,12 +51,12 @@ DVolume_Dt = Cd * ThroatArea * sqrt ( (2/RhoWater) * ( ( (Pgage+Pamb) * (( VAirI
 %Mass (how mass of Rocket changes with time, it's )
 DMass_Dt = - Cd .* ThroatArea .* sqrt ( 2.*RhoWater.* ( Pressure - Pamb ) );
 
-derivatives = [ DMass_Dt; 0; DVolume_Dt; dadt_X; dadt_Z; States(4) ; States(5) ] ;
 
+derivatives = [ DMass_Dt; 0; DVolume_Dt; dadt_X; dadt_Z; States(4) ; States(5) ] ;
+t1 = [ t1 ; [Time Thrust] ];
 %% Phase 2:
 
 elseif States(3)>= Volbottle
-
 %T and P of end states
 Tend = TAirInit * (( VAirInit/Volbottle) ^ (GammaGas-1) );
 Pend = (Pgage+Pamb) * (( VAirInit/Volbottle) ^ (GammaGas) );
@@ -101,6 +102,8 @@ dadt_Z =  ( ((Thrust - Drag) * HeadingZ) - States(1)*g ) ./ States(1) ;
 
 
 derivatives = [ MassRocketFlowRate; -MassAirFlowRate; 0; dadt_X; dadt_Z; States(4) ; States(5) ] ;
+t2 = [ t2 ; Time ];
+
 
 %% Phase 3: 
 
@@ -116,9 +119,15 @@ Drag = ( Rhoairamb / 2) .* (TotalVeloc).^2 * CD*BottleArea;
 dadt_X = ( (Thrust - Drag) * HeadingX) ./ States(1) ;
 dadt_Z =  ( ((Thrust - Drag) * HeadingZ) - States(1)*g ) ./ States(1) ;
 
+
 derivatives = [ 0; 0; 0; dadt_X; dadt_Z; States(4) ; States(5) ] ;
+t3 = [ t3 ; Time ];
 
 end
 
+
+
 end
+
+
 
